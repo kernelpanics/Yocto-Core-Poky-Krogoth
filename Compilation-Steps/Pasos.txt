@@ -1,0 +1,24 @@
+Pasos creación imagen Yocto Krogoth
+Incluye aplicaciones como MJPG-Streamer (Streamer-Snapshot), Postfix, Mailx (Correos), compilador GCC, etc
+
+1- Seguir pasos de este link http://www.jumpnowtek.com/rpi/Raspberry-Pi-Systems-with-Yocto.html o de lo contrario seguir
+el manual adjunto Pasos Compilación Yocto Krogoth, ahí viene explicado desde como crearla, la configuración y pasarlo a la
+uSD (esperar para pasarla). Si la página está caída se adjunta el .html de la página.
+
+2- Una vez compilada, aun no pasarla a la tarjeta porque se necesita editar el console-image.bb y el bblayers.conf (estas 
+son las capas de las aplicaciones, dependencias, recipes, appends que se van a instalar). Los archivos console-image.bb y 
+bblayers.conf vienen adjuntos. 
+
+Si se quieren instalar recipes, se tiene que ir a la pagina de OpenEmbedded a buscarlas, 
+revisar appends, dependencias, layers (capas), absolutamente todo.. si se necesita agregar layers, lo primero es clonarlas
+en Poky Krogoth, eso se explica al principio del manual Pasos Compilación Yocto Krogoth, luego de esto se ocupa agregar el
+path del layer al bblayers.conf y por ultimo agregar el recipe en el console-image.bb en la seccion extra core image install
+Después de esto se necesita recompilar la imagen, esto deberia de durar menos que el proceso inicial, si se va a instalar
+OpenCV o recipes muy pesados puede que dure mucho tiempo para hacerlo..
+
+Revisar las dependencias es lo mas dificil, aqui pueden salir errores de todo tipo, desde warnings por links caidos, hasta
+errores de compilación por haber escrito algo mal o porque fallo al crear el recipe en la imagen.
+
+3- Si todo funciona correctamente, se puede proceder a configurar el WiFi (adjunto configuracion), configurar el MJPG-Strea
+mer, Postfix, etc.
+

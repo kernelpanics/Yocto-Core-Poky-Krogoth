@@ -1,0 +1,422 @@
+Pasos Compilacion Yocto Krogoth (Ubuntu 16.04 Xenial Xerus, cualquier otra distribucion de Ubuntu deberia funcionar sin problema)
+Editado por Juan Jose Rojas Salazar
+Usuario: jjrojas@jjrojas:~$
+
+1. Configuracion de Ubuntu
+Se procede a instalar los sigs paquetes o corroborar que se encuentran instalados (sudo apt-get install <nombre_paquete> en un terminal)
+
+build-essential
+chrpath
+diffstat
+gawk
+git
+libncurses5-dev
+pkg-config
+subversion
+texi2html
+texinfo
+
+2. Cambiar el shell de Ubuntu de dash a bash, corriendo este comando en el terminal
+sudo dpkg-reconfigure dash
+
+Cuando aparezca una pantalla de consulta, seleccionar no.
+
+3. Herramientas de Desarrollo - Clonacion de repositorios
+
+Primero el repositorio de Yocto Poky Krogoth
+jjrojas@jjrojas:~$ git clone -b krogoth git://git.yoctoproject.org/poky.git poky-krogoth
+
+Luego el repositorio de meta-openembedded
+jjrojas@jjrojas:~$ cd poky-krogoth
+jjrojas@jjrojas:~/poky-krogoth$ git clone -b krogoth git://git.openembedded.org/meta-openembedded
+
+Por ultimo el repositorio meta-raspberry. Como no existe branch [Krogoth], se utiliza [master]
+jjrojas@jjrojas:~/poky-krogoth$ git clone -b master git://git.yoctoproject.org/meta-raspberrypi
+
+Estos 3 repositorios no deberian necesitar modificaciones excepto actualizaciones que puedan ser reutilizadas para proyectos u otras tarjetas.
+
+4. Clonar el repositorio meta-rpi
+Se crea un subdirectorio por separado para el repositorio antes de clonarlo. Aqui es donde se pueden realizar modificaciones.
+jjrojas@jjrojas:~$ mkdir ~/rpi
+jjrojas@jjrojas:~$ cd ~/rpi
+jjrojas@jjrojas:~/rpi$ git clone -b krogoth git://github.com/jumpnow/meta-rpi
+
+
+5. Inicializar el directorio de compilacion
+Se pone el directorio de compilacion en ~/rpi con el meta-rpi layer.
+
+Manualmente esto se hace creando la estructura de directorio como sigue:
+jjrojas@jjrojas:~$ mkdir -p ~/rpi/build/conf
+
+Seguidamente usar el script de ambiente Yocto oe-init-build-env 
+jjrojas@jjrojas:~$ source poky-krogoth/oe-init-build-env ~/rpi/build
+
+Se creara el directorio de compilacion si no existe. Existen algunos archivos de configuracion de muestra en el directorio de meta-rpi/conf y 
+se copian en la carpeta sin el -sample, esto se ejecuta de la sig manera 
+jjrojas@jjrojas:~/rpi$ cp meta-rpi/conf/local.conf-sample build/conf/local.conf
+jjrojas@jjrojas:~/rpi$ cp meta-rpi/conf/bblayers.conf-sample build/conf/bblayers.conf
+
+No usar '~' cuando se definen rutas de directorio, esto porque puede alterar con la ruta de defecto que tiene que es "/home/jjrojas"
+
+6. Editar bblayers.conf (se encuentra disponible en jjrojas@jjrojas:~/rpi/build/conf$)
+
+En mi caso, la modificacion al archivo que no genero ningun problema es la siguiente:
+Cambiar por home/usuario/..... para todas
+
+bblayer.conf
+
+# POKY_BBLAYERS_CONF_VERSION is increased each time build/conf/bblayers.conf
+# changes incompatibly
+POKY_BBLAYERS_CONF_VERSION = "2"
+
+BBPATH = "${TOPDIR}"
+BBFILES ?= ""
+
+BBLAYERS ?= " \
+    /home/jjrojas/poky-krogoth/meta \
+    /home/jjrojas/poky-krogoth/meta-poky \
+    /home/jjrojas/poky-krogoth/meta-yocto \
+    /home/jjrojas/poky-krogoth/meta-yocto-bsp \ 	
+    /home/jjrojas/poky-krogoth/meta-openembedded/meta-oe \
+    /home/jjrojas/poky-krogoth/meta-openembedded/meta-multimedia \
+    /home/jjrojas/poky-krogoth/meta-openembedded/meta-networking \
+    /home/jjrojas/poky-krogoth/meta-openembedded/meta-python \
+    /home/jjrojas/poky-krogoth/meta-qt5 \
+    /home/jjrojas/poky-krogoth/meta-raspberrypi \
+    /home/jjrojas/rpi/meta-rpi \	
+  "
+
+7. Editar local.conf (se encuentra disponible en jjrojas@jjrojas:~/rpi/build/conf$)
+
+Las variables que se quieren modificar son:
+
+    MACHINE
+    TMPDIR
+    DL_DIR
+    SSTATE_DIR
+
+Las que trae por defecto funcionan bien, aunque es mejor 
+
+MACHINE
+Las opciones son raspberrypi2 por defecto o raspberrypi. (se deja raspberry2)
+Se usa raspberrypi2 para la RPi3.
+
+TMPDIR
+Aqui es donde va a terminar la compilacion cruzada una vez terminada, se puede expandir a 50GB incluso, es recomendado tener 80GB disponibles si es el caso.
+La locacion por defecto es ~/rpi/build/tmp. (la carpeta tmp se puede crear manualmente o con el comando mkdir desde el terminal)
+
+DL_DIR
+Aqui es donde los archivos fuentes se van a descargar. Es necesario comprobar que el usuario que crea la imagen tenga permisos.
+La locacion por defecto es ~/rpi/build/sources. (la carpeta sources se puede crear manualmente o con el comando mkdir desde el terminal)
+
+SSTATE_DIR
+Este directorio puede crecer hasta 8 GB.
+La locacion por defecto es ~/rpi/build/sstate-cache. (la carpeta sstate-cache se puede crear manualmente o con el comando mkdir desde el terminal)
+
+Este es un ejemplo del local.conf creado 
+
+local.conf
+# Local configuration for meta-rpi images
+# Yocto Project 2.1 Poky distribution [krogoth] branch
+# This is a sysvinit system
+
+LICENSE_FLAGS_WHITELIST = "commercial"
+
+SANITY_TESTED_DISTROS += "Ubuntu-16.04"
+
+BBMASK = "meta-rpi/recipes-multimedia/"
+
+DISTRO_FEATURES = "ext2 usbhost ${DISTRO_FEATURES_LIBC}"
+
+DISTRO_FEATURES_BACKFILL_CONSIDERED += "pulseaudio"
+
+PREFERRED_PROVIDER_jpeg = "libjpeg-turbo"
+PREFERRED_PROVIDER_jpeg-native = "libjpeg-turbo-native"
+
+PREFERRED_PROVIDER_udev = "eudev"
+VIRTUAL_RUNTIME_init_manager = "sysvinit"
+
+MACHINE_FEATURES_remove = "apm"
+
+IMAGE_FSTYPES = "tar.xz"
+
+# the default is 4.1.x
+PREFERRED_VERSION_linux-raspberrypi = "4.4.%"
+
+MACHINE = "raspberrypi2"
+
+DL_DIR = "${HOME}/rpi/build/sources"
+
+SSTATE_DIR = "${HOME}/rpi/build/sstate-cache"
+
+TMPDIR = "${HOME}/rpi/build/tmp"
+
+DISTRO = "poky"
+
+PACKAGE_CLASSES = "package_deb"
+
+DISABLE_OVERSCAN = "1"
+DISPMANX_OFFLINE = "1"
+ENABLE_UART = "1"
+ENABLE_RPI3_SERIAL_CONSOLE = "1"
+
+# i686 or x86_64
+SDKMACHINE = "x86_64"
+
+EXTRA_IMAGE_FEATURES = "debug-tweaks package-management"
+
+USER_CLASSES = "image-mklibs image-prelink"
+
+PATCHRESOLVE = "noop"
+
+RM_OLD_IMAGE = "1"
+
+CONF_VERSION = "1"
+
+8. Correr la compilacion
+
+Ahora se necesita la fuente del ambiente de Yocto en la terminal antes de hacer el bitbake, el oe-init-build-env no va a sobreescribir los archivos modificados.
+jjrojas@jjrojas:~$ source poky-krogoth/oe-init-build-env ~/rpi/build
+
+### Shell environment set up for builds. ###
+
+You can now run 'bitbake '
+
+Common targets are:
+    core-image-minimal
+    core-image-sato
+    meta-toolchain
+    meta-toolchain-sdk
+    adt-installer
+    meta-ide-support
+
+You can also run generated qemu images with a command like 'runqemu qemux86'
+jjrojas@jjrojas:~/rpi/build$
+
+Se puede crear una imagen customizada segun los requerimientos necesarios, para eso se tienen las sigs imagenes en el meta-rpi layer (se pueden encontrar en meta-rpi/images/
+
+    console-image.bb
+    qt5-image.bb
+    audio-image.bb
+
+Para crear imagenes a la medida se agregan paquetes a este directorio console-image.bb , se encuentra en jjrojas@jjrojas:~/rpi/meta-rpi/images$, un ejemplo del mismo como se compilo es el siguiente:
+
+console-image.bb
+SUMMARY = "A console development image with some C/C++ dev tools"
+HOMEPAGE = "http://www.jumpnowtek.com"
+LICENSE = "MIT"
+
+IMAGE_FEATURES += "package-management splash"
+IMAGE_LINGUAS = "en-us"
+
+inherit core-image
+
+DEPENDS += "bcm2835-bootfiles"
+
+CORE_OS = " \
+    openssh openssh-keygen openssh-sftp-server \
+    term-prompt \
+    tzdata \
+ "
+
+WIFI_SUPPORT = " \
+    crda \
+    iw \
+    linux-firmware-brcm43430 \
+    linux-firmware-ralink \
+    linux-firmware-rtl8192ce \
+    linux-firmware-rtl8192cu \
+    linux-firmware-rtl8192su \
+    wireless-tools \
+    wpa-supplicant \
+ "
+
+DEV_SDK_INSTALL = " \
+    binutils \
+    binutils-symlinks \
+    coreutils \
+    cpp \
+    cpp-symlinks \
+    diffutils \
+    file \
+    gcc \
+    gcc-symlinks \
+    g++ \
+    g++-symlinks \
+    gettext \
+    git \
+    ldd \
+    libstdc++ \
+    libstdc++-dev \
+    libtool \
+    make \
+    perl-modules \
+    pkgconfig \
+    python-modules \
+ "
+
+DEV_EXTRAS = " \
+    ntp \
+    ntp-tickadj \
+    serialecho \
+    spiloop \
+ "
+
+EXTRA_TOOLS_INSTALL = " \
+    apt \	
+    bzip2 \
+    devmem2 \
+    dosfstools \
+    ethtool \
+    findutils \
+    i2c-tools \
+    iperf \
+    less \
+    modutils-initscripts \
+    nano \
+    openssl \	
+    procps \
+    rsync \
+    sysfsutils \
+    tcpdump \
+    unzip \
+    util-linux \
+    wget \
+    zip \
+ "
+
+RPI_STUFF = " \
+    omxplayer \
+    bcm2835-tests \
+    wiringpi \
+    rpio \
+    rpi-gpio \
+    pi-blaster \
+    userland \
+ "
+
+IMAGE_INSTALL += " \
+    ${CORE_OS} \
+    ${DEV_SDK_INSTALL} \
+    ${DEV_EXTRAS} \
+    ${EXTRA_TOOLS_INSTALL} \
+    ${RPI_STUFF} \
+    ${WIFI_SUPPORT} \
+ "
+
+set_local_timezone() {
+    ln -sf /usr/share/zoneinfo/EST5EDT ${IMAGE_ROOTFS}/etc/localtime
+}
+
+disable_bootlogd() {
+    echo BOOTLOGD_ENABLE=no > ${IMAGE_ROOTFS}/etc/default/bootlogd
+}
+
+ROOTFS_POSTPROCESS_COMMAND += " \
+    set_local_timezone ; \
+    disable_bootlogd ; \
+ "
+
+export IMAGE_BASENAME = "console-image"
+
+
+En EXTRA TOOLS INSTALL se pueden agregar paquetes que se encuentren en esta pagina https://layers.openembedded.org/layerindex/branch/master/layer/openembedded-core/
+
+Una imagen basica de desarrollador contiene los siguientes programas
+gcc/g++ and associated build tools
+git
+ssh/scp server and client
+perl and python with a number of modules
+omxplayer
+raspicam utilities
+
+La console-image tiene una linea definida como "inherit core-image" la cual es poky-krogoth/meta/classes/core-image.bbclass y hace los llamados a los paquetes requeridos, esto es util para crear una imagen a la medida
+
+9. Compilacion
+
+La compilacion de console-image se ejecuta con el siguiente comando
+jjrojas@jjrojas:~/rpi/build$ bitbake console-image (a partir de este punto se duran de 3-5 h dependiendo de la veloc a internet y la maquina que se use)
+
+Si se tiene errores de compilacion debido a paquetes que fallan al descargarse, la solucion mas facil es limpiar el paquete fallido y volver a compilar (esto no implica que la compilacion inicie desde cero, sino que resume la compilacion y vuelve a compilar desde el punto donde encontro el error)
+
+Un ejemplo es si por ejemplo el layer de "nombre_layer" (que se incluyo en EXTRA TOOLS INSTALL, si es el caso) falla por alguna razon, se corre el siguiente comando
+jjrojas@jjrojas:~/rpi/build$ bitbake -c cleansstate <nombre_layer>
+jjrojas@jjrojas:~/rpi/build$ bitbake <nombre_layer>
+
+Esto es para corregir el error y tratar de descargar, si el error continua, se puede de manera alternativa ir a jjrojas@jjrojas:~/rpi/meta-rpi/images$ y modificar el console-image.bb, remover el layer del archivo (por ejemplo si se agrego apt-native en EXTRA TOOLS INSTALL y no funciona, borrarlo, salvar y resumir) 
+
+Para resumir la compilacion completa se ejecuta en el terminal
+jjrojas@jjrojas:~/rpi/build$ bitbake console-image
+
+10. Copiar los binarios a una tarjeta SD
+Despues de que la compilacion termina, el bootloader, kernel y la imagen rootfs pueden ser encontradas en <TMPDIR>/deploy/images/raspberrypi2/ (<TMPDIR> es el acronimo para jjrojas@jjrojas:~/rpi/build/tmp/deploy/)
+
+Los scripts en meta-rpi/scripts pueden ayudar a formatear y copiar los archivos en una tarjeta uSD
+
+10.1 mk2parts.sh
+Este script particiona la SD en dos particiones minimas requeridas para la RPI
+Insertar la uSD en la pc y ver que aparece.
+
+lsblk es un comando util para encontrar la uSD
+
+Por ejemplo
+
+jjrojas@jjrojas:~/rpi/meta-rpi$ lsblk
+NAME   MAJ:MIN RM   SIZE RO TYPE MOUNTPOINT
+sda      8:0    0 596,2G  0 disk 
+├─sda1   8:1    0   260M  0 part /boot/efi
+├─sda2   8:2    0   128M  0 part 
+├─sda3   8:3    0 483,3G  0 part 
+├─sda4   8:4    0   9,3G  0 part 
+├─sda5   8:5    0  96,9G  0 part /
+└─sda6   8:6    0   5,9G  0 part [SWAP]
+sr0     11:0    1  1024M  0 rom  
+mmcblk0 (este mmcblk0 es el nombre comun de las SD Kingston)
+
+Se utilizara ese mmcblk0 para formatear y copiar los parametros de script en esta maquina.
+No importa si algunas particiones estan montadas,el script mk2parts.sh las va a desmontar.
+
+PELIGRO!!! Es necesario revisar el nombre de la SD, para no borrar ninguna particion importante en nuestro sistema.
+jjrojas@jjrojas:~$ cd ~/rpi/meta-rpi/scripts
+jjrojas@jjrojas:~/rpi/meta-rpi/scripts$ sudo ./mk2parts.sh mmcblk0p
+
+Solo se ocupa formatear la tarjeta una vez
+
+10.2 /media/card
+
+Es necesario crear un punto de montaje en la pc para copiar los scripts que se van a usar.
+
+jjrojas@jjrojas:~$ sudo mkdir /media/card
+
+Solo se tiene que crear este directorio una vez.
+
+10.3 copy_boot.sh
+
+Este script copia los archivos BCM2835 bootloader, el kernel de Linux, dtbs para RPi 2 y un numero determinado de DTB overlays (that I have not tried) para particionar la particion de arranque de la uSD.
+
+copy_boot.sh necesita conocer la direccion temporal TMPDIR para encontrar los binarios. Busca por una variable de ambiente llamada OETMP.
+
+Si no se edito ninguna ruta en el proceso TMPDIR en el local.conf se deja por defecto el TMPDIR
+jjrojas@jjrojas:~/rpi/meta-rpi/scripts$ export OETMP=~/rpi/build/tmp
+
+copy_boot.sh tambien necesita una variable MACHINE que especifica la tarjeta RPi que se utiliza.
+jjrojas@jjrojas:~/rpi/meta-rpi/scripts$ export MACHINE=raspberrypi2
+
+Se ejecuta copy_boot.sh pasando la locacion de la SD
+jjrojas@jjrojas:~/rpi/meta-rpi/scripts$ ./copy_boot.sh mmcblk0p
+
+Este script tiene que ejecutarse muy rapido.
+
+10.4 copy_rootfs.sh
+Este script copia el sistema raiz de archivos a la segunda particion de la SD.
+El copy_rootfs.sh necesita los mismos OETMP y MACHINE variables.
+
+Para correr el copy_rootfs.sh se ejecuta
+jjrojas@jjrojas:~/rpi/meta-rpi/scripts$ ./copy_rootfs.sh mmcblk0p console
+
+copy_rootfs.sh puede tomar mas tiempo para correr, solo esperar a que termine (Done). Una vez que se termine desmontar la SD normalmente, volver a introducir en la pc y verificar que existen dos particiones BOOT y ROOT en la uSD.
+
+Proceder a pasar la uSD a la RaspberryPi2 y bootear...
+
+
+
