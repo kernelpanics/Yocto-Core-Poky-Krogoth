@@ -1,0 +1,54 @@
+En la imagen:
+
+en lib: 
+
+mkdir firmware
+cd  firmware 
+mkdir rtlwifi  (Si la carpeta firmware ya esta, solo crear rtlwifi)
+
+Descargar el driver de https://github.com/raspberrypi/linux/issues/764 con el siguiente comando:
+
+wget https://github.com/lwfinger/rtl8188eu/raw/c83976d1dfb4793893158461430261562b3a5bf0/rtl8188eufw.bin
+
+Hay que guardar el archivo en la carpeta rtlwifi (si rtlwifi tiene mas .bin de configuracion borrarlos, solo interesa el rtl8188eufw.bin)
+
+en etc:
+Irse al wpa-supplicant.conf modificar el archivo (con nautilus si ocupa privilegios) o con nano en Yocto si esta instalado
+
+ctrl_interface=/var/run/wpa_supplicant
+ctrl_interface_group=0
+update_config=1
+
+network={
+	ssid="nombredesured"
+        key_mgmt=NONE          (si no funciona, pruebe a quitar el key_mgmt=NONE, guardar y salvar - Para conexiones sin clave)
+}
+
+Si su red es WPA/WPA2
+
+network={
+	ssid="nombredesured"
+        scan_ssid=1        
+	key_mgmt=WPA-PSK       (guardar y salvar - Para conexiones con clave)
+	psk="contrasena"
+}
+
+Para conectar la terminal a internet una vez en Yocto (asegurarse de que se esta ejecutando con ifconfig)
+
+ifconfig wlan0 up
+ifconfig eth0 down
+ifup wlan0
+
+esperar a que tire un mensaje "no lease...."
+
+iwconfig wlan0 essid nombredesured (ese nombredesured ojala sea una señal de wifi abierta, osea sin clave)
+udhcpc wlan0
+
+dejarlo un momento mientras sale "sending discover..." para que haga la conexión, luego cortar el proceso y hacer ping a google para confirmar que está conectado.
+
+ping www.google.com
+
+(Si el ping no le devuelve nada esta mamando fuertemente y saber que esta pasando esta dificil jajaja)
+
+
+
